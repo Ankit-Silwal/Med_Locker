@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   Users, 
@@ -29,83 +29,31 @@ import {
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
+import { apiGet, apiPost } from '../utils/api';
+
+interface DoctorDashboardData {
+  stats: {
+    totalPatients: number;
+    todaysAppointments: number;
+    pendingReports: number;
+    criticalCases: number;
+  };
+  patients: any[];
+  todayAppointments: Array<{ time: string; patient: string; type: string }>;
+  aiSuggestions: Array<{ patient: string; suggestion: string; priority: string }>;
+}
 
 export default function DoctorDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [addDiagnosisOpen, setAddDiagnosisOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<DoctorDashboardData | null>(null);
 
-  const myPatients = [
-    {
-      id: 1,
-      name: 'Dikshya Tiwari',
-      age: 28,
-      gender: 'Female',
-      lastVisit: '2026-02-20',
-      condition: 'Diabetes Type 2',
-      status: 'stable',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-      nextAppointment: '2026-03-15'
-    },
-    {
-      id: 2,
-      name: 'Raj Kumar',
-      age: 45,
-      gender: 'Male',
-      lastVisit: '2026-02-18',
-      condition: 'Hypertension',
-      status: 'attention',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop',
-      nextAppointment: '2026-03-10'
-    },
-    {
-      id: 3,
-      name: 'Priya Sharma',
-      age: 32,
-      gender: 'Female',
-      lastVisit: '2026-02-22',
-      condition: 'Asthma',
-      status: 'stable',
-      avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-      nextAppointment: '2026-03-20'
-    },
-    {
-      id: 4,
-      name: 'Arjun Patel',
-      age: 55,
-      gender: 'Male',
-      lastVisit: '2026-02-25',
-      condition: 'Cardiac Issue',
-      status: 'critical',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-      nextAppointment: '2026-03-05'
-    }
-  ];
-
-  const todayAppointments = [
-    { time: '09:00 AM', patient: 'Dikshya Tiwari', type: 'Follow-up' },
-    { time: '10:30 AM', patient: 'Arjun Patel', type: 'Consultation' },
-    { time: '02:00 PM', patient: 'Priya Sharma', type: 'Check-up' },
-    { time: '04:00 PM', patient: 'Raj Kumar', type: 'Follow-up' }
-  ];
-
-  const aiSuggestions = [
-    {
-      patient: 'Arjun Patel',
-      suggestion: 'Consider ECG test based on recent symptoms and cardiac history',
-      priority: 'high'
-    },
-    {
-      patient: 'Dikshya Tiwari',
-      suggestion: 'HbA1c levels trending up - medication adjustment may be needed',
-      priority: 'medium'
-    },
-    {
-      patient: 'Raj Kumar',
-      suggestion: 'Blood pressure readings show improvement with current medication',
-      priority: 'low'
-    }
-  ];
+  useEffect(() => {
+    apiGet<DoctorDashboardData>('/doctor-dashboard')
+      .then(setDashboard)
+      .catch(() => setDashboard(null));
+  }, []);
 
   const handleAddDiagnosis = (patient: any) => {
     setSelectedPatient(patient);
@@ -113,9 +61,15 @@ export default function DoctorDashboard() {
   };
 
   const handleSaveDiagnosis = () => {
-    toast.success('Diagnosis and prescription saved successfully!');
-    setAddDiagnosisOpen(false);
-    setSelectedPatient(null);
+    apiPost('/doctor-dashboard/notes', {
+      patientId: selectedPatient?.id,
+    })
+      .then(() => {
+        toast.success('Diagnosis and prescription saved successfully!');
+        setAddDiagnosisOpen(false);
+        setSelectedPatient(null);
+      })
+      .catch(() => toast.error('Failed to save diagnosis. Please try again.'));
   };
 
   const getStatusColor = (status: string) => {
@@ -131,7 +85,7 @@ export default function DoctorDashboard() {
     }
   };
 
-  const filteredPatients = myPatients.filter(patient =>
+  const filteredPatients = (dashboard?.patients || []).filter((patient) =>
     patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     patient.condition.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -157,10 +111,10 @@ export default function DoctorDashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { icon: Users, label: 'Total Patients', value: '124', color: 'text-[#1E90FF]', bg: 'bg-[#1E90FF]/10' },
-          { icon: Calendar, label: 'Today\'s Appointments', value: '8', color: 'text-[#00C851]', bg: 'bg-[#00C851]/10' },
-          { icon: FileText, label: 'Pending Reports', value: '12', color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' },
-          { icon: Activity, label: 'Critical Cases', value: '3', color: 'text-red-600', bg: 'bg-red-100' }
+          { icon: Users, label: 'Total Patients', value: String(dashboard?.stats?.totalPatients ?? 0), color: 'text-[#1E90FF]', bg: 'bg-[#1E90FF]/10' },
+          { icon: Calendar, label: 'Today\'s Appointments', value: String(dashboard?.stats?.todaysAppointments ?? 0), color: 'text-[#00C851]', bg: 'bg-[#00C851]/10' },
+          { icon: FileText, label: 'Pending Reports', value: String(dashboard?.stats?.pendingReports ?? 0), color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' },
+          { icon: Activity, label: 'Critical Cases', value: String(dashboard?.stats?.criticalCases ?? 0), color: 'text-red-600', bg: 'bg-red-100' }
         ].map((stat, index) => {
           const Icon = stat.icon;
           return (
@@ -203,7 +157,7 @@ export default function DoctorDashboard() {
               <CardDescription>Your appointments for today</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {todayAppointments.map((apt, index) => (
+              {(dashboard?.todayAppointments || []).map((apt, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <div>
                     <p className="font-medium text-sm">{apt.patient}</p>
@@ -234,7 +188,7 @@ export default function DoctorDashboard() {
               <CardDescription>Intelligent suggestions for patient care</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {aiSuggestions.map((suggestion, index) => (
+              {(dashboard?.aiSuggestions || []).map((suggestion, index) => (
                 <div
                   key={index}
                   className="p-4 bg-gradient-to-r from-[#1E90FF]/5 to-[#00C851]/5 rounded-lg border border-gray-200"

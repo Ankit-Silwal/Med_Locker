@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router';
 import {
@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
+import { apiGet } from '../utils/api';
 
 interface Hospital {
   id: string;
@@ -31,173 +32,17 @@ interface Hospital {
   networkStatus: 'active' | 'syncing' | 'offline';
 }
 
-const hospitals: Hospital[] = [
-  {
-    id: 'aiims-delhi',
-    name: 'All India Institute of Medical Sciences',
-    shortName: 'AIIMS Delhi',
-    location: 'Ansari Nagar, New Delhi',
-    city: 'New Delhi',
-    state: 'Delhi',
-    established: '1956',
-    type: 'Government',
-    departments: 42,
-    doctors: 685,
-    patients: 8500,
-    rating: 4.9,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'apollo-chennai',
-    name: 'Apollo Hospitals',
-    shortName: 'Apollo Chennai',
-    location: 'Greams Road, Chennai',
-    city: 'Chennai',
-    state: 'Tamil Nadu',
-    established: '1983',
-    type: 'Private',
-    departments: 52,
-    doctors: 450,
-    patients: 6200,
-    rating: 4.8,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'fortis-gurgaon',
-    name: 'Fortis Memorial Research Institute',
-    shortName: 'Fortis Gurgaon',
-    location: 'Sector 44, Gurgaon',
-    city: 'Gurgaon',
-    state: 'Haryana',
-    established: '2007',
-    type: 'Private',
-    departments: 35,
-    doctors: 380,
-    patients: 4800,
-    rating: 4.7,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'medanta-gurgaon',
-    name: 'Medanta - The Medicity',
-    shortName: 'Medanta Gurgaon',
-    location: 'Sector 38, Gurgaon',
-    city: 'Gurgaon',
-    state: 'Haryana',
-    established: '2009',
-    type: 'Private',
-    departments: 45,
-    doctors: 800,
-    patients: 7200,
-    rating: 4.8,
-    verified: true,
-    networkStatus: 'syncing'
-  },
-  {
-    id: 'tata-mumbai',
-    name: 'Tata Memorial Hospital',
-    shortName: 'Tata Memorial Mumbai',
-    location: 'Parel, Mumbai',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    established: '1941',
-    type: 'Government',
-    departments: 28,
-    doctors: 520,
-    patients: 5600,
-    rating: 4.9,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'cmc-vellore',
-    name: 'Christian Medical College',
-    shortName: 'CMC Vellore',
-    location: 'Ida Scudder Road, Vellore',
-    city: 'Vellore',
-    state: 'Tamil Nadu',
-    established: '1900',
-    type: 'Private',
-    departments: 38,
-    doctors: 650,
-    patients: 6800,
-    rating: 4.9,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'narayana-bangalore',
-    name: 'Narayana Health City',
-    shortName: 'Narayana Health Bangalore',
-    location: 'Bommasandra, Bangalore',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    established: '2001',
-    type: 'Private',
-    departments: 31,
-    doctors: 420,
-    patients: 5200,
-    rating: 4.7,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'kokilaben-mumbai',
-    name: 'Kokilaben Dhirubhai Ambani Hospital',
-    shortName: 'Kokilaben Hospital Mumbai',
-    location: 'Andheri West, Mumbai',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    established: '2009',
-    type: 'Private',
-    departments: 36,
-    doctors: 480,
-    patients: 5800,
-    rating: 4.8,
-    verified: true,
-    networkStatus: 'active'
-  },
-  {
-    id: 'manipal-bangalore',
-    name: 'Manipal Hospitals',
-    shortName: 'Manipal Hospitals Bangalore',
-    location: 'Old Airport Road, Bangalore',
-    city: 'Bangalore',
-    state: 'Karnataka',
-    established: '1991',
-    type: 'Private',
-    departments: 33,
-    doctors: 390,
-    patients: 4600,
-    rating: 4.7,
-    verified: true,
-    networkStatus: 'syncing'
-  },
-  {
-    id: 'max-delhi',
-    name: 'Max Super Speciality Hospital',
-    shortName: 'Max Hospital Delhi',
-    location: 'Saket, New Delhi',
-    city: 'New Delhi',
-    state: 'Delhi',
-    established: '2006',
-    type: 'Private',
-    departments: 40,
-    doctors: 510,
-    patients: 6100,
-    rating: 4.8,
-    verified: true,
-    networkStatus: 'active'
-  }
-];
-
 export default function HospitalSelection() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
+  const [hospitals, setHospitals] = useState<Hospital[]>([]);
+
+  useEffect(() => {
+    apiGet<Hospital[]>('/hospitals')
+      .then(setHospitals)
+      .catch(() => setHospitals([]));
+  }, []);
 
   const filteredHospitals = hospitals.filter(hospital => {
     const matchesSearch = hospital.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

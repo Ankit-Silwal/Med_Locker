@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   FileText, 
@@ -35,9 +35,22 @@ import {
 } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { toast } from 'sonner';
+import { apiGet, apiPost } from '../utils/api';
+
+interface HealthRecordItem {
+  _id: string;
+  date: string;
+  type: string;
+  title: string;
+  doctor: string;
+  hospital: string;
+  status: string;
+  aiInsight: string;
+  details: string;
+}
 
 export default function HealthRecords() {
-  const [expandedRecord, setExpandedRecord] = useState<number | null>(null);
+  const [expandedRecord, setExpandedRecord] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -46,70 +59,22 @@ export default function HealthRecords() {
   const [doctorName, setDoctorName] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const records = [
-    {
-      id: 1,
-      date: '2026-02-20',
-      type: 'Lab Report',
-      title: 'Blood Test Results',
-      doctor: 'Dr. Ramesh Sharma',
-      hospital: 'Apollo Hospital, Mumbai',
-      status: 'normal',
-      aiInsight: 'All blood parameters are within normal range. Vitamin D levels are slightly low - consider supplementation.',
-      details: 'Complete Blood Count, Lipid Profile, Liver Function Test'
-    },
-    {
-      id: 2,
-      date: '2026-02-15',
-      type: 'Prescription',
-      title: 'Diabetes Medication',
-      doctor: 'Dr. Priya Gupta',
-      hospital: 'Fortis Hospital, Delhi',
-      status: 'active',
-      aiInsight: 'Medication dosage is appropriate. Continue current treatment plan and monitor blood sugar levels.',
-      details: 'Metformin 500mg - 2x daily, Vitamin D3 - 1x daily'
-    },
-    {
-      id: 3,
-      date: '2026-02-10',
-      type: 'Scan',
-      title: 'Chest X-Ray',
-      doctor: 'Dr. Ankit Verma',
-      hospital: 'Max Hospital, Bangalore',
-      status: 'normal',
-      aiInsight: 'No abnormalities detected. Lungs are clear and heart size is normal.',
-      details: 'Posteroanterior and lateral views'
-    },
-    {
-      id: 4,
-      date: '2026-02-05',
-      type: 'Consultation',
-      title: 'Annual Health Checkup',
-      doctor: 'Dr. Kavita Desai',
-      hospital: 'AIIMS, New Delhi',
-      status: 'completed',
-      aiInsight: 'Overall health is good. Recommended to increase physical activity and maintain healthy diet.',
-      details: 'General examination, vital signs assessment'
-    },
-    {
-      id: 5,
-      date: '2026-01-28',
-      type: 'Lab Report',
-      title: 'Thyroid Function Test',
-      doctor: 'Dr. Suresh Reddy',
-      hospital: 'Apollo Hospital, Hyderabad',
-      status: 'normal',
-      aiInsight: 'Thyroid hormone levels are optimal. Continue regular monitoring every 6 months.',
-      details: 'TSH, T3, T4 levels'
-    }
-  ];
+  const [records, setRecords] = useState<HealthRecordItem[]>([]);
 
-  const filteredRecords = records.filter(record => {
-    const matchesSearch = record.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         record.doctor.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesFilter = filterType === 'all' || record.type === filterType;
-    return matchesSearch && matchesFilter;
-  });
+  const loadRecords = () => {
+    const params = new URLSearchParams({
+      search: searchQuery,
+      type: filterType,
+    });
+
+    apiGet<HealthRecordItem[]>(`/health-records?${params.toString()}`)
+      .then(setRecords)
+      .catch(() => toast.error('Unable to load health records'));
+  };
+
+  useEffect(() => {
+    loadRecords();
+  }, [searchQuery, filterType]);
 
   const handleUpload = () => {
     if (!recordTitle || !recordType || !doctorName) {
@@ -117,13 +82,31 @@ export default function HealthRecords() {
       return;
     }
     
-    toast.success('Record uploaded successfully!');
-    // Reset form
-    setRecordTitle('');
-    setRecordType('');
-    setDoctorName('');
-    setSelectedFile(null);
-    setUploadDialogOpen(false);
+    const normalizedType =
+      recordType === 'lab'
+        ? 'Lab Report'
+        : recordType === 'prescription'
+        ? 'Prescription'
+        : recordType === 'scan'
+        ? 'Scan'
+        : 'Consultation';
+
+    apiPost('/health-records', {
+      title: recordTitle,
+      type: normalizedType,
+      doctor: doctorName,
+      fileName: selectedFile?.name || '',
+    })
+      .then(() => {
+        toast.success('Record uploaded successfully!');
+        setRecordTitle('');
+        setRecordType('');
+        setDoctorName('');
+        setSelectedFile(null);
+        setUploadDialogOpen(false);
+        loadRecords();
+      })
+      .catch((error) => toast.error(error.message || 'Unable to upload record'));
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -266,7 +249,7 @@ export default function HealthRecords() {
 
       {/* Records List */}
       <div className="space-y-4">
-        {filteredRecords.map((record, index) => (
+        {records.map((record, index) => (
           <motion.div
             key={record.id}
             initial={{ opacity: 0, y: 20 }}
@@ -305,7 +288,7 @@ export default function HealthRecords() {
                       </div>
                     </div>
 
-                    {expandedRecord === record.id && (
+                    {expandedRecord === record._id && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -335,9 +318,9 @@ export default function HealthRecords() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setExpandedRecord(expandedRecord === record.id ? null : record.id)}
+                      onClick={() => setExpandedRecord(expandedRecord === record._id ? null : record._id)}
                     >
-                      {expandedRecord === record.id ? (
+                      {expandedRecord === record._id ? (
                         <>
                           <ChevronUp className="w-4 h-4 mr-2" />
                           Less
@@ -361,7 +344,7 @@ export default function HealthRecords() {
         ))}
       </div>
 
-      {filteredRecords.length === 0 && (
+      {records.length === 0 && (
         <Card>
           <CardContent className="p-12 text-center">
             <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />

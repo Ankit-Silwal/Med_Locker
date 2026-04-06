@@ -36,6 +36,16 @@ import {
   SelectValue,
 } from '../components/ui/select';
 import { toast } from 'sonner';
+import { apiGet } from '../utils/api';
+
+interface DashboardHomePayload {
+  healthSummary: Array<{ icon: string; label: string; value: string; color: string; bg: string }>;
+  upcomingAppointments: Array<{ id: number; doctor: string; specialty: string; date: string; time: string; avatar: string }>;
+  aiRecommendations: Array<{ title: string; description: string; priority: string }>;
+  medicineReminders: Array<{ name: string; time: string; status: string }>;
+  quickActions: Array<{ icon: string; label: string; color: string; action: string }>;
+  goalsProgress: Array<{ label: string; current: string; progress: number }>;
+}
 
 export default function DashboardHome() {
   const navigate = useNavigate();
@@ -46,6 +56,14 @@ export default function DashboardHome() {
   const [recordTitle, setRecordTitle] = useState('');
   const [recordType, setRecordType] = useState('');
   const [doctorName, setDoctorName] = useState('');
+  const [dashboardData, setDashboardData] = useState<DashboardHomePayload>({
+    healthSummary: [],
+    upcomingAppointments: [],
+    aiRecommendations: [],
+    medicineReminders: [],
+    quickActions: [],
+    goalsProgress: [],
+  });
 
   useEffect(() => {
     // Get user role and redirect to role-specific dashboard
@@ -58,66 +76,39 @@ export default function DashboardHome() {
     } else if (role === ROLE_KEYS.HOSPITAL_ADMIN) {
       navigate('/dashboard/hospital-admin', { replace: true });
     }
+
+    apiGet<DashboardHomePayload>('/dashboard-home')
+      .then(setDashboardData)
+      .catch(() => {
+        setDashboardData({
+          healthSummary: [],
+          upcomingAppointments: [],
+          aiRecommendations: [],
+          medicineReminders: [],
+          quickActions: [],
+          goalsProgress: [],
+        });
+      });
   }, [navigate]);
 
-  // Default: Show patient dashboard
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: 'Dr. Ramesh Sharma',
-      specialty: 'Cardiologist',
-      date: '2026-02-25',
-      time: '10:00 AM',
-      avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop'
-    },
-    {
-      id: 2,
-      doctor: 'Dr. Priya Gupta',
-      specialty: 'General Physician',
-      date: '2026-02-27',
-      time: '02:30 PM',
-      avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop'
-    },
-    {
-      id: 3,
-      doctor: 'Dr. Ankit Verma',
-      specialty: 'Dermatologist',
-      date: '2026-03-01',
-      time: '11:15 AM',
-      avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop'
-    }
-  ];
+  const iconMap: Record<string, any> = {
+    Heart,
+    Activity,
+    Droplets,
+    Thermometer,
+    FileText,
+    Calendar,
+    Upload,
+  };
 
-  const aiRecommendations = [
-    {
-      title: 'Maintain Hydration',
-      description: 'Your water intake is below recommended levels. Aim for 8 glasses daily.',
-      priority: 'medium'
-    },
-    {
-      title: 'Blood Pressure Check',
-      description: 'Schedule a BP check-up. Last reading was 3 weeks ago.',
-      priority: 'high'
-    },
-    {
-      title: 'Exercise Routine',
-      description: 'Your activity levels are great! Keep maintaining 30 mins daily.',
-      priority: 'low'
-    }
-  ];
-
-  const medicineReminders = [
-    { name: 'Metformin', time: '9:00 AM', status: 'taken' },
-    { name: 'Vitamin D3', time: '12:00 PM', status: 'upcoming' },
-    { name: 'Aspirin', time: '9:00 PM', status: 'upcoming' }
-  ];
-
-  const quickActions = [
-    { icon: FileText, label: 'Add Record', color: 'bg-[#1E90FF]', action: 'add-record' },
-    { icon: Calendar, label: 'Schedule Appointment', color: 'bg-[#00C851]', action: 'schedule' },
-    { icon: Upload, label: 'Upload Lab Results', color: 'bg-[#FF6B6B]', action: 'upload-lab' },
-    { icon: Upload, label: 'Upload Prescription', color: 'bg-[#1E90FF]', action: 'upload-prescription' }
-  ];
+  const quickActions = dashboardData.quickActions.length
+    ? dashboardData.quickActions
+    : [
+        { icon: 'FileText', label: 'Add Record', color: 'bg-[#1E90FF]', action: 'add-record' },
+        { icon: 'Calendar', label: 'Schedule Appointment', color: 'bg-[#00C851]', action: 'schedule' },
+        { icon: 'Upload', label: 'Upload Lab Results', color: 'bg-[#FF6B6B]', action: 'upload-lab' },
+        { icon: 'Upload', label: 'Upload Prescription', color: 'bg-[#1E90FF]', action: 'upload-prescription' },
+      ];
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -184,13 +175,8 @@ export default function DashboardHome() {
 
       {/* Health Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { icon: Heart, label: 'Heart Rate', value: '72 bpm', color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' },
-          { icon: Activity, label: 'Blood Pressure', value: '120/80', color: 'text-[#1E90FF]', bg: 'bg-[#1E90FF]/10' },
-          { icon: Droplets, label: 'Blood Sugar', value: '95 mg/dL', color: 'text-[#00C851]', bg: 'bg-[#00C851]/10' },
-          { icon: Thermometer, label: 'Temperature', value: '98.6°F', color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' }
-        ].map((stat, index) => {
-          const Icon = stat.icon;
+        {dashboardData.healthSummary.map((stat, index) => {
+          const Icon = iconMap[stat.icon] || Heart;
           return (
             <motion.div
               key={index}
@@ -237,7 +223,7 @@ export default function DashboardHome() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {upcomingAppointments.map((appointment, index) => (
+              {dashboardData.upcomingAppointments.map((appointment, index) => (
                 <motion.div
                   key={appointment.id}
                   initial={{ opacity: 0, x: -20 }}
@@ -276,7 +262,7 @@ export default function DashboardHome() {
               <CardDescription>Personalized health insights</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {aiRecommendations.map((rec, index) => (
+              {dashboardData.aiRecommendations.map((rec, index) => (
                 <motion.div
                   key={index}
                   initial={{ opacity: 0, y: 10 }}
@@ -319,7 +305,7 @@ export default function DashboardHome() {
               <CardDescription>Today's schedule</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {medicineReminders.map((med, index) => (
+              {dashboardData.medicineReminders.map((med, index) => (
                 <div
                   key={index}
                   className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -355,27 +341,15 @@ export default function DashboardHome() {
               <CardDescription>Track your wellness journey</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Daily Steps</span>
-                  <span className="text-sm text-gray-600">7,500 / 10,000</span>
+              {dashboardData.goalsProgress.map((goal) => (
+                <div key={goal.label}>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium">{goal.label}</span>
+                    <span className="text-sm text-gray-600">{goal.current}</span>
+                  </div>
+                  <Progress value={goal.progress} className="h-2" />
                 </div>
-                <Progress value={75} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Water Intake</span>
-                  <span className="text-sm text-gray-600">5 / 8 glasses</span>
-                </div>
-                <Progress value={62.5} className="h-2" />
-              </div>
-              <div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-sm font-medium">Sleep Quality</span>
-                  <span className="text-sm text-gray-600">7 / 8 hours</span>
-                </div>
-                <Progress value={87.5} className="h-2" />
-              </div>
+              ))}
             </CardContent>
           </Card>
         </motion.div>
@@ -393,11 +367,11 @@ export default function DashboardHome() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {quickActions.map((action, index) => {
-                const Icon = action.icon;
+                {quickActions.map((action) => {
+                  const Icon = iconMap[action.icon] || FileText;
                 return (
                   <motion.button
-                    key={index}
+                    key={action.action}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`${action.color} text-white p-6 rounded-lg flex flex-col items-center justify-center space-y-2 hover:opacity-90 transition-opacity`}

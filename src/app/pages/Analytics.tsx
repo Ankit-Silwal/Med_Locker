@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { TrendingUp, TrendingDown, Download, Calendar, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
@@ -20,82 +21,32 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { apiGet } from '../utils/api';
+
+interface AnalyticsData {
+  weightData: Array<{ month: string; weight: number; target: number }>;
+  bloodPressureData: Array<{ date: string; systolic: number; diastolic: number }>;
+  bloodSugarData: Array<{ time: string; level: number }>;
+  heartRateData: Array<{ day: string; rate: number }>;
+  activityData: Array<{ name: string; value: number; color: string }>;
+  stats: Array<{ title: string; value: string; change: string; trend: string; color: string }>;
+}
 
 export default function Analytics() {
-  const weightData = [
-    { month: 'Jan', weight: 75, target: 72 },
-    { month: 'Feb', weight: 74, target: 72 },
-    { month: 'Mar', weight: 73.5, target: 72 },
-    { month: 'Apr', weight: 73, target: 72 },
-    { month: 'May', weight: 72.5, target: 72 },
-    { month: 'Jun', weight: 72, target: 72 }
-  ];
+  const [data, setData] = useState<AnalyticsData>({
+    weightData: [],
+    bloodPressureData: [],
+    bloodSugarData: [],
+    heartRateData: [],
+    activityData: [],
+    stats: [],
+  });
 
-  const bloodPressureData = [
-    { date: 'Week 1', systolic: 120, diastolic: 80 },
-    { date: 'Week 2', systolic: 122, diastolic: 82 },
-    { date: 'Week 3', systolic: 118, diastolic: 78 },
-    { date: 'Week 4', systolic: 120, diastolic: 80 },
-    { date: 'Week 5', systolic: 119, diastolic: 79 },
-    { date: 'Week 6', systolic: 121, diastolic: 81 }
-  ];
-
-  const bloodSugarData = [
-    { time: '6 AM', level: 95 },
-    { time: '9 AM', level: 110 },
-    { time: '12 PM', level: 120 },
-    { time: '3 PM', level: 105 },
-    { time: '6 PM', level: 115 },
-    { time: '9 PM', level: 100 }
-  ];
-
-  const heartRateData = [
-    { day: 'Mon', rate: 72 },
-    { day: 'Tue', rate: 75 },
-    { day: 'Wed', rate: 70 },
-    { day: 'Thu', rate: 73 },
-    { day: 'Fri', rate: 71 },
-    { day: 'Sat', rate: 74 },
-    { day: 'Sun', rate: 72 }
-  ];
-
-  const activityData = [
-    { name: 'Steps', value: 7500, color: '#1E90FF' },
-    { name: 'Exercise', value: 30, color: '#00C851' },
-    { name: 'Sleep', value: 7, color: '#FF6B6B' },
-    { name: 'Water', value: 5, color: '#1E90FF' }
-  ];
-
-  const stats = [
-    {
-      title: 'Average Heart Rate',
-      value: '72 bpm',
-      change: '+2%',
-      trend: 'up',
-      color: 'text-[#FF6B6B]'
-    },
-    {
-      title: 'Blood Pressure',
-      value: '120/80',
-      change: 'Normal',
-      trend: 'stable',
-      color: 'text-[#00C851]'
-    },
-    {
-      title: 'Blood Sugar',
-      value: '95 mg/dL',
-      change: '-5%',
-      trend: 'down',
-      color: 'text-[#1E90FF]'
-    },
-    {
-      title: 'Weight',
-      value: '72 kg',
-      change: '-3 kg',
-      trend: 'down',
-      color: 'text-[#00C851]'
-    }
-  ];
+  useEffect(() => {
+    apiGet<AnalyticsData>('/analytics')
+      .then(setData)
+      .catch(() => setData({ weightData: [], bloodPressureData: [], bloodSugarData: [], heartRateData: [], activityData: [], stats: [] }));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -117,7 +68,7 @@ export default function Analytics() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {data.stats.map((stat, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 20 }}
@@ -157,7 +108,7 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={weightData}>
+                <LineChart data={data.weightData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="month" stroke="#666" />
                   <YAxis stroke="#666" />
@@ -199,7 +150,7 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={bloodPressureData}>
+                <BarChart data={data.bloodPressureData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="date" stroke="#666" />
                   <YAxis stroke="#666" />
@@ -227,7 +178,7 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <AreaChart data={bloodSugarData}>
+                <AreaChart data={data.bloodSugarData}>
                   <defs>
                     <linearGradient id="colorSugar" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.3}/>
@@ -266,7 +217,7 @@ export default function Analytics() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={heartRateData}>
+                <LineChart data={data.heartRateData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="day" stroke="#666" />
                   <YAxis stroke="#666" />
@@ -304,7 +255,7 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={activityData}
+                  data={data.activityData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -313,7 +264,7 @@ export default function Analytics() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {activityData.map((entry, index) => (
+                  {data.activityData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>

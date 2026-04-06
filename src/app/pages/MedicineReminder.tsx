@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   Pill, 
@@ -38,6 +38,7 @@ import {
 } from '../components/ui/select';
 import { Switch } from '../components/ui/switch';
 import { toast } from 'sonner';
+import { apiGet, apiPatch } from '../utils/api';
 
 interface Medication {
   id: number;
@@ -50,87 +51,48 @@ interface Medication {
   progress: number;
 }
 
-export default function MedicineReminder() {
-  const [medications, setMedications] = useState<Medication[]>([
-    {
-      id: 1,
-      name: 'Metformin',
-      dosage: '500mg',
-      frequency: ['morning', 'night'],
-      timing: 'after-meal',
-      duration: '30 days',
-      status: 'active',
-      progress: 60
-    },
-    {
-      id: 2,
-      name: 'Vitamin D3',
-      dosage: '60,000 IU',
-      frequency: ['morning'],
-      timing: 'after-meal',
-      duration: '10 weeks',
-      status: 'active',
-      progress: 40
-    },
-    {
-      id: 3,
-      name: 'Aspirin',
-      dosage: '75mg',
-      frequency: ['night'],
-      timing: 'after-meal',
-      duration: '90 days',
-      status: 'active',
-      progress: 75
-    },
-    {
-      id: 4,
-      name: 'Atorvastatin',
-      dosage: '10mg',
-      frequency: ['night'],
-      timing: 'before-meal',
-      duration: '60 days',
-      status: 'active',
-      progress: 50
-    }
-  ]);
+interface ScheduleItem {
+  id: number;
+  time: string;
+  medicines: Array<{ name: string; dosage: string; timing: string }>;
+  period: string;
+  status: string;
+}
 
-  const todaySchedule = [
-    {
-      id: 1,
-      time: '09:00 AM',
-      medicines: [
-        { name: 'Metformin', dosage: '500mg', timing: 'after-meal' },
-        { name: 'Vitamin D3', dosage: '60,000 IU', timing: 'after-meal' }
-      ],
-      period: 'morning',
-      status: 'taken'
-    },
-    {
-      id: 2,
-      time: '02:00 PM',
-      medicines: [
-        { name: 'Calcium', dosage: '500mg', timing: 'after-meal' }
-      ],
-      period: 'afternoon',
-      status: 'upcoming'
-    },
-    {
-      id: 3,
-      time: '09:00 PM',
-      medicines: [
-        { name: 'Metformin', dosage: '500mg', timing: 'after-meal' },
-        { name: 'Aspirin', dosage: '75mg', timing: 'after-meal' },
-        { name: 'Atorvastatin', dosage: '10mg', timing: 'before-meal' }
-      ],
-      period: 'night',
-      status: 'upcoming'
-    }
-  ];
+interface MedicineReminderPayload {
+  medications: Medication[];
+  todaySchedule: ScheduleItem[];
+}
+
+export default function MedicineReminder() {
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [todaySchedule, setTodaySchedule] = useState<ScheduleItem[]>([]);
+
+  const loadReminders = () => {
+    apiGet<MedicineReminderPayload>('/medicine-reminders')
+      .then((payload) => {
+        setMedications(payload.medications || []);
+        setTodaySchedule(payload.todaySchedule || []);
+      })
+      .catch(() => {
+        setMedications([]);
+        setTodaySchedule([]);
+      });
+  };
+
+  useEffect(() => {
+    loadReminders();
+  }, []);
 
   const nextDose = todaySchedule.find(s => s.status === 'upcoming');
 
   const handleMarkAsTaken = (scheduleId: number) => {
-    toast.success('Medication marked as taken!');
+    apiPatch(`/medicine-reminders/schedule/${scheduleId}/taken`)
+      .then(() => {
+        toast.success('Medication marked as taken!');
+        loadReminders();
+      })
+      .catch(() => toast.error('Unable to update reminder status'));
   };
 
   const handleSnooze = (scheduleId: number) => {

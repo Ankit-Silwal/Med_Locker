@@ -47,6 +47,27 @@ import {
 import { toast } from 'sonner';
 import NetworkVisualization from '../components/NetworkVisualization';
 import EmergencyQRCode from '../components/EmergencyQRCode';
+import { apiGet } from '../utils/api';
+
+interface HospitalAdminPayload {
+  hospitalInfo: {
+    name: string;
+    location: string;
+    established: string;
+    departments: number;
+    totalDoctors: number;
+    totalPatients: number;
+    rating: number;
+  };
+  doctors: any[];
+  recentActivities: Array<{ type: string; message: string; time: string }>;
+  monthlyStats: Array<{ month: string; appointments: number; patients: number }>;
+  networkStats?: {
+    sharedRecords: number;
+    accessGrantedHospitals: number;
+    appointmentsToday: number;
+  };
+}
 
 export default function HospitalAdminDashboard() {
   const [addDoctorOpen, setAddDoctorOpen] = useState(false);
@@ -63,8 +84,36 @@ export default function HospitalAdminDashboard() {
     totalPatients: 1250,
     rating: 4.8
   });
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [recentActivities, setRecentActivities] = useState<Array<{ type: string; message: string; time: string }>>([]);
+  const [monthlyStats, setMonthlyStats] = useState<Array<{ month: string; appointments: number; patients: number }>>([]);
+  const [networkStats, setNetworkStats] = useState({
+    sharedRecords: 0,
+    accessGrantedHospitals: 0,
+    appointmentsToday: 0,
+  });
 
   useEffect(() => {
+    apiGet<HospitalAdminPayload>('/hospital-admin')
+      .then((payload) => {
+        if (payload?.hospitalInfo) setHospitalInfo(payload.hospitalInfo);
+        setDoctors(payload?.doctors || []);
+        setRecentActivities(payload?.recentActivities || []);
+        setMonthlyStats(payload?.monthlyStats || []);
+        setNetworkStats(
+          payload?.networkStats || {
+            sharedRecords: 0,
+            accessGrantedHospitals: 0,
+            appointmentsToday: 0,
+          }
+        );
+      })
+      .catch(() => {
+        setDoctors([]);
+        setRecentActivities([]);
+        setMonthlyStats([]);
+      });
+
     // Load selected hospital from localStorage
     const selectedHospital = localStorage.getItem('selectedHospital');
     if (selectedHospital) {
@@ -84,58 +133,6 @@ export default function HospitalAdminDashboard() {
       }
     }
   }, []);
-
-  const doctors = [
-    {
-      id: 1,
-      name: 'Dr. Ramesh Sharma',
-      specialty: 'Cardiologist',
-      experience: '15 years',
-      patients: 124,
-      status: 'active',
-      avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop'
-    },
-    {
-      id: 2,
-      name: 'Dr. Priya Gupta',
-      specialty: 'General Physician',
-      experience: '10 years',
-      patients: 156,
-      status: 'active',
-      avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop'
-    },
-    {
-      id: 3,
-      name: 'Dr. Ankit Verma',
-      specialty: 'Dermatologist',
-      experience: '8 years',
-      patients: 98,
-      status: 'active',
-      avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop'
-    },
-    {
-      id: 4,
-      name: 'Dr. Kavita Desai',
-      specialty: 'Endocrinologist',
-      experience: '12 years',
-      patients: 110,
-      status: 'on-leave',
-      avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop'
-    }
-  ];
-
-  const recentActivities = [
-    { type: 'appointment', message: 'New appointment booked - Dr. Ramesh Sharma', time: '10 mins ago' },
-    { type: 'patient', message: '5 new patient registrations', time: '1 hour ago' },
-    { type: 'report', message: 'Monthly analytics report generated', time: '2 hours ago' },
-    { type: 'doctor', message: 'Dr. Priya Gupta updated availability', time: '3 hours ago' }
-  ];
-
-  const monthlyStats = [
-    { month: 'Jan', appointments: 450, patients: 320 },
-    { month: 'Feb', appointments: 520, patients: 380 },
-    { month: 'Mar', appointments: 480, patients: 350 }
-  ];
 
   const handleAddDoctor = () => {
     toast.success('Doctor added successfully!');
@@ -220,7 +217,7 @@ export default function HospitalAdminDashboard() {
                   <Share2 className="w-4 h-4 text-[#FF6B6B]" />
                   <div>
                     <p className="text-xs text-gray-600">Shared Records</p>
-                    <p className="text-sm font-bold text-gray-900">1,245 Active</p>
+                    <p className="text-sm font-bold text-gray-900">{networkStats.sharedRecords} Active</p>
                   </div>
                 </div>
                 <div className="h-8 w-px bg-gray-300"></div>
@@ -228,7 +225,7 @@ export default function HospitalAdminDashboard() {
                   <Shield className="w-4 h-4 text-[#00C851]" />
                   <div>
                     <p className="text-xs text-gray-600">Access Granted</p>
-                    <p className="text-sm font-bold text-gray-900">8 Hospitals</p>
+                    <p className="text-sm font-bold text-gray-900">{networkStats.accessGrantedHospitals} Hospitals</p>
                   </div>
                 </div>
               </div>
@@ -276,7 +273,7 @@ export default function HospitalAdminDashboard() {
         {[
           { icon: Users, label: 'Total Doctors', value: hospitalInfo.totalDoctors.toString(), color: 'text-[#1E90FF]', bg: 'bg-[#1E90FF]/10' },
           { icon: Users, label: 'Total Patients', value: hospitalInfo.totalPatients.toString(), color: 'text-[#00C851]', bg: 'bg-[#00C851]/10' },
-          { icon: Calendar, label: 'Appointments Today', value: '45', color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' },
+          { icon: Calendar, label: 'Appointments Today', value: String(networkStats.appointmentsToday), color: 'text-[#FF6B6B]', bg: 'bg-[#FF6B6B]/10' },
           { icon: Building2, label: 'Departments', value: hospitalInfo.departments.toString(), color: 'text-[#1E90FF]', bg: 'bg-[#1E90FF]/10' },
           { icon: Network, label: 'Network Access', value: '9 Hospitals', color: 'text-[#00C851]', bg: 'bg-[#00C851]/10', badge: true }
         ].map((stat, index) => {

@@ -2,6 +2,19 @@
 
 A modern, visually stunning, and fully responsive digital health management platform powered by AI.
 
+## Backend Setup (MongoDB)
+
+This project now includes a Node.js + Express + MongoDB backend for dynamic data.
+
+1. Create `.env` from `.env.example`.
+2. Set `MONGODB_URI` to your MongoDB Atlas/local connection string.
+3. Install dependencies:
+	- `npm install`
+4. Run frontend + backend together:
+	- `npm run dev:full`
+
+Frontend runs on Vite and calls backend routes through `/api` proxy.
+
 ## 🌟 Features
 
 ### Landing Page

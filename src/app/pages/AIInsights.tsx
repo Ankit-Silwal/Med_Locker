@@ -1,117 +1,57 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Brain, TrendingUp, AlertTriangle, Heart, Activity, Droplets, Scale } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Progress } from '../components/ui/progress';
 import { Badge } from '../components/ui/badge';
+import { apiGet } from '../utils/api';
+
+interface InsightItem {
+  id: number;
+  title: string;
+  score: number;
+  status: string;
+  icon: 'Heart' | 'Activity' | 'Droplets' | 'Scale';
+  color: string;
+  bgColor: string;
+  description: string;
+  recommendations: string[];
+}
+
+interface AIInsightsPayload {
+  insights: InsightItem[];
+  healthAlerts: Array<{ id: number; priority: string; title: string; message: string; time: string }>;
+  aiPredictions: Array<{ metric: string; prediction: string; confidence: number; trend: string }>;
+  summary: { healthScore: number; activeGoals: number; complianceRate: number; message: string };
+}
 
 export default function AIInsights() {
-  const insights = [
-    {
-      id: 1,
-      title: 'Cardiovascular Health',
-      score: 85,
-      status: 'good',
-      icon: Heart,
-      color: 'text-[#00C851]',
-      bgColor: 'bg-[#00C851]/10',
-      description: 'Your heart rate and blood pressure are stable. Continue your current exercise routine.',
-      recommendations: [
-        'Maintain 30 minutes of cardio exercise daily',
-        'Monitor blood pressure weekly',
-        'Include omega-3 rich foods in diet'
-      ]
-    },
-    {
-      id: 2,
-      title: 'Metabolic Health',
-      score: 72,
-      status: 'attention',
-      icon: Activity,
-      color: 'text-[#FF6B6B]',
-      bgColor: 'bg-[#FF6B6B]/10',
-      description: 'Blood sugar levels show minor fluctuations. Consider dietary adjustments.',
-      recommendations: [
-        'Reduce refined sugar intake',
-        'Increase fiber consumption',
-        'Schedule diabetes screening test'
-      ]
-    },
-    {
-      id: 3,
-      title: 'Hydration Level',
-      score: 68,
-      status: 'attention',
-      icon: Droplets,
-      color: 'text-[#1E90FF]',
-      bgColor: 'bg-[#1E90FF]/10',
-      description: 'Your water intake is below recommended levels. Aim for 8 glasses daily.',
-      recommendations: [
-        'Drink water every 2 hours',
-        'Use hydration reminder apps',
-        'Include water-rich fruits and vegetables'
-      ]
-    },
-    {
-      id: 4,
-      title: 'Weight Management',
-      score: 92,
-      status: 'excellent',
-      icon: Scale,
-      color: 'text-[#00C851]',
-      bgColor: 'bg-[#00C851]/10',
-      description: 'Excellent progress! You have reached your target weight goal.',
-      recommendations: [
-        'Maintain current diet plan',
-        'Continue regular exercise',
-        'Monitor weight weekly'
-      ]
-    }
-  ];
+  const [data, setData] = useState<AIInsightsPayload>({
+    insights: [],
+    healthAlerts: [],
+    aiPredictions: [],
+    summary: { healthScore: 0, activeGoals: 0, complianceRate: 0, message: '' },
+  });
 
-  const healthAlerts = [
-    {
-      id: 1,
-      priority: 'high',
-      title: 'Medication Reminder',
-      message: 'You have missed 2 doses of Metformin this week. Please maintain consistency.',
-      time: '2 hours ago'
-    },
-    {
-      id: 2,
-      priority: 'medium',
-      title: 'Lab Test Due',
-      message: 'Your quarterly blood work is due in 5 days. Schedule an appointment soon.',
-      time: '1 day ago'
-    },
-    {
-      id: 3,
-      priority: 'low',
-      title: 'Exercise Milestone',
-      message: 'Great job! You have completed 20 consecutive days of exercise.',
-      time: '3 days ago'
-    }
-  ];
+  useEffect(() => {
+    apiGet<AIInsightsPayload>('/ai-insights')
+      .then(setData)
+      .catch(() => {
+        setData({
+          insights: [],
+          healthAlerts: [],
+          aiPredictions: [],
+          summary: { healthScore: 0, activeGoals: 0, complianceRate: 0, message: '' },
+        });
+      });
+  }, []);
 
-  const aiPredictions = [
-    {
-      metric: 'Blood Pressure',
-      prediction: 'Stable',
-      confidence: 94,
-      trend: 'Your BP is likely to remain within normal range for the next 3 months based on current lifestyle.'
-    },
-    {
-      metric: 'Blood Sugar',
-      prediction: 'Minor Increase',
-      confidence: 78,
-      trend: 'You may experience slight increase in fasting glucose. Consider dietary modifications.'
-    },
-    {
-      metric: 'Weight',
-      prediction: 'Stable',
-      confidence: 91,
-      trend: 'Weight is expected to remain stable with current exercise and diet routine.'
-    }
-  ];
+  const iconMap = {
+    Heart,
+    Activity,
+    Droplets,
+    Scale,
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#00C851]';
@@ -154,8 +94,8 @@ export default function AIInsights() {
 
       {/* Health Score Cards */}
       <div className="grid md:grid-cols-2 gap-6">
-        {insights.map((insight, index) => {
-          const Icon = insight.icon;
+        {data.insights.map((insight, index) => {
+          const Icon = iconMap[insight.icon] || Heart;
           return (
             <motion.div
               key={insight.id}
@@ -224,7 +164,7 @@ export default function AIInsights() {
             <CardDescription>Important updates about your health</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {healthAlerts.map((alert) => (
+            {data.healthAlerts.map((alert) => (
               <motion.div
                 key={alert.id}
                 whileHover={{ x: 4 }}
@@ -259,7 +199,7 @@ export default function AIInsights() {
             <CardDescription>Forecasts based on your health data and trends</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {aiPredictions.map((prediction, index) => (
+            {data.aiPredictions.map((prediction, index) => (
               <div key={index} className="p-4 bg-gradient-to-r from-[#1E90FF]/5 to-[#00C851]/5 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-semibold text-gray-900">{prediction.metric}</h4>
@@ -299,19 +239,19 @@ export default function AIInsights() {
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
               <p className="text-lg mb-4">
-                Based on comprehensive analysis of your health records, vitals, and lifestyle data, your overall health is in <strong>good condition</strong>. Keep maintaining your current healthy habits and follow the AI recommendations for optimal wellness.
+                {data.summary.message}
               </p>
               <div className="grid md:grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-3xl font-bold">82%</div>
+                  <div className="text-3xl font-bold">{data.summary.healthScore}%</div>
                   <div className="text-sm text-white/80">Health Score</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold">15</div>
+                  <div className="text-3xl font-bold">{data.summary.activeGoals}</div>
                   <div className="text-sm text-white/80">Active Goals</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold">95%</div>
+                  <div className="text-3xl font-bold">{data.summary.complianceRate}%</div>
                   <div className="text-sm text-white/80">Compliance Rate</div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { 
   Calendar as CalendarIcon, 
@@ -37,6 +37,26 @@ import {
 } from '../components/ui/select';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
+import { apiGet, apiPatch, apiPost } from '../utils/api';
+
+interface AppointmentItem {
+  id: number;
+  doctor: string;
+  specialty: string;
+  date: string;
+  time: string;
+  type: string;
+  location: string;
+  avatar: string;
+  status: string;
+}
+
+interface AppointmentData {
+  upcomingAppointments: AppointmentItem[];
+  pastAppointments: AppointmentItem[];
+  availableDoctors: Array<{ name: string; specialty: string; avatar: string }>;
+  timeSlots: string[];
+}
 
 export default function Appointments() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -45,90 +65,24 @@ export default function Appointments() {
   const [selectedDoctor, setSelectedDoctor] = useState('');
   const [appointmentType, setAppointmentType] = useState('');
   const [visitReason, setVisitReason] = useState('');
+  const [data, setData] = useState<AppointmentData>({
+    upcomingAppointments: [],
+    pastAppointments: [],
+    availableDoctors: [],
+    timeSlots: [],
+  });
 
-  const upcomingAppointments = [
-    {
-      id: 1,
-      doctor: 'Dr. Ramesh Sharma',
-      specialty: 'Cardiologist',
-      date: '2026-02-25',
-      time: '10:00 AM',
-      type: 'In-person',
-      location: 'Apollo Hospital, Mumbai',
-      avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop',
-      status: 'confirmed'
-    },
-    {
-      id: 2,
-      doctor: 'Dr. Priya Gupta',
-      specialty: 'General Physician',
-      date: '2026-02-27',
-      time: '02:30 PM',
-      type: 'Video',
-      location: 'Online Consultation',
-      avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop',
-      status: 'confirmed'
-    },
-    {
-      id: 3,
-      doctor: 'Dr. Ankit Verma',
-      specialty: 'Dermatologist',
-      date: '2026-03-01',
-      time: '11:15 AM',
-      type: 'In-person',
-      location: 'Max Hospital, Bangalore',
-      avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop',
-      status: 'pending'
-    }
-  ];
+  const loadAppointments = () => {
+    apiGet<AppointmentData>('/appointments')
+      .then(setData)
+      .catch(() => {
+        toast.error('Unable to load appointments');
+      });
+  };
 
-  const pastAppointments = [
-    {
-      id: 4,
-      doctor: 'Dr. Kavita Desai',
-      specialty: 'Endocrinologist',
-      date: '2026-02-15',
-      time: '03:00 PM',
-      type: 'In-person',
-      location: 'AIIMS, New Delhi',
-      avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop',
-      status: 'completed'
-    },
-    {
-      id: 5,
-      doctor: 'Dr. Suresh Reddy',
-      specialty: 'Orthopedic',
-      date: '2026-02-10',
-      time: '09:30 AM',
-      type: 'Video',
-      location: 'Online Consultation',
-      avatar: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=100&h=100&fit=crop',
-      status: 'completed'
-    },
-    {
-      id: 6,
-      doctor: 'Dr. Meera Patel',
-      specialty: 'Gynecologist',
-      date: '2026-02-05',
-      time: '04:00 PM',
-      type: 'In-person',
-      location: 'Fortis Hospital, Delhi',
-      avatar: 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=100&h=100&fit=crop',
-      status: 'completed'
-    }
-  ];
-
-  const availableDoctors = [
-    { name: 'Dr. Ramesh Sharma', specialty: 'Cardiologist', avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop' },
-    { name: 'Dr. Priya Gupta', specialty: 'General Physician', avatar: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=100&h=100&fit=crop' },
-    { name: 'Dr. Ankit Verma', specialty: 'Dermatologist', avatar: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=100&h=100&fit=crop' },
-    { name: 'Dr. Kavita Desai', specialty: 'Endocrinologist', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=100&h=100&fit=crop' }
-  ];
-
-  const timeSlots = [
-    '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM',
-    '02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM'
-  ];
+  useEffect(() => {
+    loadAppointments();
+  }, []);
 
   const handleBookAppointment = () => {
     if (!selectedDoctor || !appointmentType || !date || !selectedTime || !visitReason) {
@@ -136,21 +90,38 @@ export default function Appointments() {
       return;
     }
     
-    toast.success('Appointment booked successfully!');
-    // Reset form
-    setSelectedDoctor('');
-    setAppointmentType('');
-    setSelectedTime('');
-    setVisitReason('');
-    setBookDialogOpen(false);
+    apiPost('/appointments', {
+      doctor: selectedDoctor,
+      type: appointmentType,
+      date: date.toISOString().slice(0, 10),
+      time: selectedTime,
+      reason: visitReason,
+    })
+      .then(() => {
+        toast.success('Appointment booked successfully!');
+        setSelectedDoctor('');
+        setAppointmentType('');
+        setSelectedTime('');
+        setVisitReason('');
+        setBookDialogOpen(false);
+        loadAppointments();
+      })
+      .catch((error) => toast.error(error.message || 'Unable to book appointment'));
   };
 
   const handleReschedule = (appointmentId: number) => {
-    toast.info('Rescheduling appointment...');
+    apiPatch(`/appointments/${appointmentId}/reschedule`)
+      .then(() => toast.info('Rescheduling request submitted'))
+      .catch(() => toast.error('Unable to reschedule now'));
   };
 
   const handleCancel = (appointmentId: number) => {
-    toast.success('Appointment cancelled successfully');
+    apiPatch(`/appointments/${appointmentId}/cancel`)
+      .then(() => {
+        toast.success('Appointment cancelled successfully');
+        loadAppointments();
+      })
+      .catch(() => toast.error('Unable to cancel appointment'));
   };
 
   const getStatusIcon = (status: string) => {
@@ -271,7 +242,7 @@ export default function Appointments() {
                     <SelectValue placeholder="Choose a doctor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableDoctors.map((doctor, index) => (
+                    {data.availableDoctors.map((doctor, index) => (
                       <SelectItem key={index} value={doctor.name}>
                         <div className="flex items-center space-x-2">
                           <span>{doctor.name}</span>
@@ -310,7 +281,7 @@ export default function Appointments() {
               <div className="space-y-2">
                 <Label>Available Time Slots</Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {timeSlots.map((time) => (
+                  {data.timeSlots.map((time) => (
                     <Button
                       key={time}
                       type="button"
@@ -354,7 +325,7 @@ export default function Appointments() {
 
         <TabsContent value="upcoming" className="space-y-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingAppointments.map((appointment) => (
+            {data.upcomingAppointments.map((appointment) => (
               <AppointmentCard key={appointment.id} appointment={appointment} />
             ))}
           </div>
@@ -362,7 +333,7 @@ export default function Appointments() {
 
         <TabsContent value="past" className="space-y-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {pastAppointments.map((appointment) => (
+            {data.pastAppointments.map((appointment) => (
               <AppointmentCard key={appointment.id} appointment={appointment} />
             ))}
           </div>
