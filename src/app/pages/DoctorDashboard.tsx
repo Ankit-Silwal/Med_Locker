@@ -30,6 +30,7 @@ import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { toast } from 'sonner';
 import { apiGet, apiPost } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 interface DoctorDashboardData {
   stats: {
@@ -44,6 +45,7 @@ interface DoctorDashboardData {
 }
 
 export default function DoctorDashboard() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [addDiagnosisOpen, setAddDiagnosisOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
@@ -100,7 +102,7 @@ export default function DoctorDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Doctor Panel</h1>
-            <p className="text-gray-600">Welcome back, Dr. Ramesh Sharma</p>
+            <p className="text-gray-600">Welcome back, Dr. {user?.name || 'Doctor'}</p>
           </div>
           <div className="bg-gradient-to-r from-[#1E90FF] to-[#00C851] p-4 rounded-lg">
             <Stethoscope className="w-8 h-8 text-white" />

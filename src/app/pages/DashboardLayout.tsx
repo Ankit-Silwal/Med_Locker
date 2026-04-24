@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router';
+import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -33,6 +34,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { getUserRole, clearAuth } from '../utils/roleManager';
 
 export default function DashboardLayout() {
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -112,15 +114,16 @@ export default function DashboardLayout() {
   const menuItems = getMenuItems();
 
   const handleLogout = () => {
-    // Clear any stored auth data
+    logout();
     clearAuth();
-    // Navigate to landing page
     navigate('/');
   };
 
   const handleSettings = () => {
     navigate('/dashboard/settings');
   };
+
+  const initials = user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2) : 'ML';
 
   return (
     <div className="min-h-screen bg-[#F5F5F5]">
@@ -151,10 +154,10 @@ export default function DashboardLayout() {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-3 hover:bg-gray-50 rounded-lg p-2 transition-colors">
                     <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${getRoleColor()} flex items-center justify-center text-white font-semibold`}>
-                      DT
+                      {initials}
                     </div>
                     <div className="hidden md:block text-left">
-                      <div className="text-sm font-semibold">Dikshya Tiwari</div>
+                      <div className="text-sm font-semibold">{user?.name || 'User'}</div>
                       <div className="text-xs text-gray-500">{getRoleLabel()}</div>
                     </div>
                   </button>

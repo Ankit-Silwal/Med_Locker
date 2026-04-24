@@ -48,6 +48,7 @@ import { toast } from 'sonner';
 import NetworkVisualization from '../components/NetworkVisualization';
 import EmergencyQRCode from '../components/EmergencyQRCode';
 import { apiGet } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 interface HospitalAdminPayload {
   hospitalInfo: {
@@ -70,6 +71,7 @@ interface HospitalAdminPayload {
 }
 
 export default function HospitalAdminDashboard() {
+  const { user } = useAuth();
   const [addDoctorOpen, setAddDoctorOpen] = useState(false);
   const [editHospitalOpen, setEditHospitalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -163,7 +165,7 @@ export default function HospitalAdminDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Hospital Admin Panel</h1>
-            <p className="text-gray-600">{hospitalInfo.name} - Management Dashboard</p>
+            <p className="text-gray-600">Welcome {user?.name || hospitalInfo.name} - Management Dashboard</p>
           </div>
           <div className="flex gap-3">
             <Button

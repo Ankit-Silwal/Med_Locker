@@ -20,8 +20,10 @@ import { Switch } from '../components/ui/switch';
 import { Separator } from '../components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
+  const { user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [notifications, setNotifications] = useState({
     appointments: true,
@@ -81,14 +83,14 @@ export default function Settings() {
                     <Label htmlFor="firstName">First Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <Input id="firstName" placeholder="Dikshya" className="pl-10" defaultValue="Dikshya" />
+                      <Input id="firstName" placeholder="First Name" className="pl-10" defaultValue={user?.name?.split(' ')[0] || ''} />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
                     <div className="relative">
                       <User className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                      <Input id="lastName" placeholder="Tiwari" className="pl-10" defaultValue="Tiwari" />
+                      <Input id="lastName" placeholder="Last Name" className="pl-10" defaultValue={user?.name?.split(' ').slice(1).join(' ') || ''} />
                     </div>
                   </div>
                 </div>
@@ -97,7 +99,7 @@ export default function Settings() {
                   <Label htmlFor="email">Email Address</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-                    <Input id="email" type="email" placeholder="dikshya@example.com" className="pl-10" defaultValue="dikshya.tiwari@example.com" />
+                    <Input id="email" type="email" placeholder="email@example.com" className="pl-10" defaultValue={user?.email || ''} />
                   </div>
                 </div>
 

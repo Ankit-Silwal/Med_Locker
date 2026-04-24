@@ -12,6 +12,9 @@ import AIInsightsData from './models/AIInsightsData.js';
 import MedicineReminderData from './models/MedicineReminderData.js';
 import HospitalAdminData from './models/HospitalAdminData.js';
 import DashboardHomeData from './models/DashboardHomeData.js';
+import authRoutes from './routes/authRoutes.js';
+import { protect } from './middleware/authMiddleware.js';
+import User from './models/User.js';
 
 dotenv.config();
 
@@ -20,6 +23,8 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 app.use(express.json());
+
+app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'med-locker-api' });
@@ -44,8 +49,13 @@ app.get('/api/hospitals', async (req, res) => {
   res.json(hospitals);
 });
 
-app.get('/api/doctor-dashboard', async (_req, res) => {
-  const data = await DoctorDashboard.findOne({ slug: 'default' }).lean();
+app.get('/api/doctor-dashboard', protect, async (req, res) => {
+  const user = await User.findById(req.user._id).populate('doctorProfile');
+  const data = user.doctorProfile;
+  if (!data) {
+    const defaultData = await DoctorDashboard.findOne({ slug: 'default' }).lean();
+    return res.json(defaultData);
+  }
   res.json(data);
 });
 
@@ -161,13 +171,28 @@ app.patch('/api/medicine-reminders/schedule/:id/taken', async (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/hospital-admin', async (_req, res) => {
-  const data = await HospitalAdminData.findOne({ slug: 'default' }).lean();
+app.get('/api/hospital-admin', protect, async (req, res) => {
+  const user = await User.findById(req.user._id).populate('hospitalAdminProfile');
+  const data = user.hospitalAdminProfile;
+  if (!data) {
+    const defaultData = await HospitalAdminData.findOne({ slug: 'default' }).lean();
+    return res.json(defaultData);
+  }
   res.json(data);
 });
 
-app.get('/api/dashboard-home', async (_req, res) => {
-  const data = await DashboardHomeData.findOne({ slug: 'default' }).lean();
+app.get('/api/dashboard-home', protect, async (req, res) => {
+  const user = await User.findById(req.user._id).populate('patientProfile');
+  let data = user.patientProfile;
+  if (!data) {
+    const defaultData = await DashboardHomeData.findOne({ slug: 'default' }).lean();
+    return res.json(defaultData);
+  }
+  // Ensure the frontend doesn't crash on newly created profiles with empty arrays
+  if (!data.healthSummary || data.healthSummary.length === 0) {
+    const defaultData = await DashboardHomeData.findOne({ slug: 'default' }).lean();
+    return res.json(defaultData);
+  }
   res.json(data);
 });
 

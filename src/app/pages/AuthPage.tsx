@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
-import { motion } from 'motion/react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Heart, Mail, Lock, User, Eye, EyeOff, Chrome } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -9,41 +9,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '../components/ui/radio-group';
 import { toast } from 'sonner';
-import { setUserRole, getDashboardRoute, ROLE_KEYS } from '../utils/roleManager';
+import { useAuth } from '../context/AuthContext';
+import { getDashboardRoute, ROLE_KEYS } from '../utils/roleManager';
 
 export default function AuthPage() {
   const navigate = useNavigate();
+  const { login, signup, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
-  const [role, setRole] = useState('patient');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState(ROLE_KEYS.PATIENT);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Mock auth token
-    localStorage.setItem('authToken', 'mock-token-' + Date.now());
-
-    // Save role to localStorage for role-based routing
-    if (!isLogin) {
-      setUserRole(role as any);
-    } else {
-      // For demo purposes, default to patient role on login
-      setUserRole(ROLE_KEYS.PATIENT);
-    }
-
-    toast.success(isLogin ? 'Welcome back!' : 'Account created successfully!');
-
-    // Navigate to hospital selection for hospital admins, otherwise to role-specific dashboard
-    const selectedRole = isLogin ? ROLE_KEYS.PATIENT : role;
-    if (selectedRole === ROLE_KEYS.HOSPITAL_ADMIN) {
-      setTimeout(() => {
-        navigate('/hospital-selection');
-      }, 1000);
-    } else {
-      const dashboardRoute = getDashboardRoute(selectedRole as any);
-      setTimeout(() => {
-        navigate(dashboardRoute);
-      }, 1000);
+    try {
+      if (isLogin) {
+        await login({ email, password });
+        toast.success('Welcome back!');
+      } else {
+        await signup({ name, email, password, role });
+        toast.success('Account created successfully!');
+      }
+      const dashboardRoute = getDashboardRoute(role as any);
+      navigate(dashboardRoute);
+    } catch (error: any) {
+      toast.error(error.message || 'An error occurred');
     }
   };
 
@@ -101,6 +93,8 @@ export default function AuthPage() {
                     <Input
                       id="name"
                       type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
                       placeholder="Dikshya Tiwari"
                       className="pl-10"
                       required
@@ -116,6 +110,8 @@ export default function AuthPage() {
                   <Input
                     id="email"
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="dikshya@example.com"
                     className="pl-10"
                     required
@@ -129,6 +125,8 @@ export default function AuthPage() {
                   <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                   <Input
                     id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
                     className="pl-10 pr-10"

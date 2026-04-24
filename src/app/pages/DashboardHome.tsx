@@ -19,24 +19,13 @@ import { Button } from '../components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Badge } from '../components/ui/badge';
 import { Progress } from '../components/ui/progress';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { toast } from 'sonner';
 import { apiGet } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 interface DashboardHomePayload {
   healthSummary: Array<{ icon: string; label: string; value: string; color: string; bg: string }>;
@@ -49,6 +38,7 @@ interface DashboardHomePayload {
 
 export default function DashboardHome() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [userRole, setUserRole] = useState<string>('patient');
   const [uploadLabDialogOpen, setUploadLabDialogOpen] = useState(false);
   const [uploadPrescriptionDialogOpen, setUploadPrescriptionDialogOpen] = useState(false);
@@ -169,7 +159,7 @@ export default function DashboardHome() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, Dikshya!</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back, {user?.name || 'User'}!</h1>
         <p className="text-gray-600">Here's your health overview for today</p>
       </motion.div>
 
